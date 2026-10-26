@@ -246,8 +246,10 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <img src={company.logoDataUrl || defaultLogo} alt="logo" style={{ height: 64, objectFit: "contain" }} />
         <div style={{ textAlign: "right" }}>
-          {isDuplicateCopy && (
+          {isDuplicateCopy ? (
             <div style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 3 }}>(Duplicate copy for transport)</div>
+          ) : (
+            <div style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 3 }}>(Original Invoice)</div>
           )}
           <div style={{ fontSize: 26, fontWeight: 700, color: GREEN, letterSpacing: 1 }}>TAX INVOICE</div>
         </div>

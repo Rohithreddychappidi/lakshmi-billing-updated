@@ -303,7 +303,7 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
                         )}
                       </div>
                       <div className="text-[11px] text-ink/50 mt-0.5">
-                        Original copy (no duplicate text)
+                        Adds "(Original Invoice)"
                       </div>
                     </button>
                     <button
