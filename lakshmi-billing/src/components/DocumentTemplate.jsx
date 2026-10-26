@@ -27,6 +27,8 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
   const customer = doc.customer || {};
   const items = doc.items || [];
   const gstRate = doc.gstRate || 18;
+  const isUnionTerritory = doc.stateType === "ut" || doc.taxType === "igst";
+  const isDuplicateCopy = doc.invoiceCopyType === "duplicate" || (!doc.invoiceCopyType && !!doc.duplicateCopyForTransport);
 
   if (type === "proforma") {
     return (
@@ -119,7 +121,7 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
               <th style={th()}>HSN</th>
               <th style={th()}>QTY/ charges</th>
               <th style={th()}>RATE</th>
-              <th style={th()}>GST</th>
+              <th style={th()}>{isUnionTerritory ? "IGST" : "GST"}</th>
               <th style={th({ textAlign: "right" })}>TOTAL</th>
             </tr>
           </thead>
@@ -164,18 +166,27 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
               <span>Sub Total:</span>
               <span>{formatINR(doc.subtotal)}</span>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "2px 4px" }}>
-              <span>CGST {gstRate / 2}%:</span>
-              <span>{formatINR(doc.gst / 2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "2px 4px" }}>
-              <span>SGST {gstRate / 2}%:</span>
-              <span>{formatINR(doc.gst / 2)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "2px 4px" }}>
-              <span>GST {gstRate}%:</span>
-              <span>{formatINR(doc.gst)}</span>
-            </div>
+            {isUnionTerritory ? (
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "2px 4px" }}>
+                <span>IGST {gstRate}%:</span>
+                <span>{formatINR(doc.gst)}</span>
+              </div>
+            ) : (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "2px 4px" }}>
+                  <span>CGST {gstRate / 2}%:</span>
+                  <span>{formatINR(doc.gst / 2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "2px 4px" }}>
+                  <span>SGST {gstRate / 2}%:</span>
+                  <span>{formatINR(doc.gst / 2)}</span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, padding: "2px 4px" }}>
+                  <span>GST {gstRate}%:</span>
+                  <span>{formatINR(doc.gst)}</span>
+                </div>
+              </>
+            )}
             <div
               style={{
                 display: "flex",
@@ -235,7 +246,7 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <img src={company.logoDataUrl || defaultLogo} alt="logo" style={{ height: 64, objectFit: "contain" }} />
         <div style={{ textAlign: "right" }}>
-          {doc.duplicateCopyForTransport && (
+          {isDuplicateCopy && (
             <div style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 3 }}>(Duplicate copy for transport)</div>
           )}
           <div style={{ fontSize: 26, fontWeight: 700, color: GREEN, letterSpacing: 1 }}>TAX INVOICE</div>
@@ -303,7 +314,7 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
             <th style={th()}>Brand</th>
             <th style={th()}>QTY</th>
             <th style={th()}>RATE</th>
-            <th style={th()}>GST</th>
+            <th style={th()}>{isUnionTerritory ? "IGST" : "GST"}</th>
             <th style={th({ textAlign: "right" })}>AMOUNT</th>
           </tr>
         </thead>
@@ -344,45 +355,63 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
             <span>Sub Total:</span>
             <span>{formatINR(doc.subtotal)}</span>
           </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "4px 8px",
-              fontSize: 11.5,
-              fontWeight: 700,
-              marginBottom: 2,
-            }}
-          >
-            <span>CGST {gstRate / 2}%:</span>
-            <span>{formatINR(doc.gst / 2)}</span>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "4px 8px",
-              fontSize: 11.5,
-              fontWeight: 700,
-              marginBottom: 2,
-            }}
-          >
-            <span>SGST {gstRate / 2}%:</span>
-            <span>{formatINR(doc.gst / 2)}</span>
-          </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "4px 8px",
-              fontSize: 11.5,
-              fontWeight: 700,
-              marginBottom: 2,
-            }}
-          >
-            <span>GST {gstRate}%:</span>
-            <span>{formatINR(doc.gst)}</span>
-          </div>
+          {isUnionTerritory ? (
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "4px 8px",
+                fontSize: 11.5,
+                fontWeight: 700,
+                marginBottom: 2,
+              }}
+            >
+              <span>IGST {gstRate}%:</span>
+              <span>{formatINR(doc.gst)}</span>
+            </div>
+          ) : (
+            <>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "4px 8px",
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  marginBottom: 2,
+                }}
+              >
+                <span>CGST {gstRate / 2}%:</span>
+                <span>{formatINR(doc.gst / 2)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "4px 8px",
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  marginBottom: 2,
+                }}
+              >
+                <span>SGST {gstRate / 2}%:</span>
+                <span>{formatINR(doc.gst / 2)}</span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "4px 8px",
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  marginBottom: 2,
+                }}
+              >
+                <span>GST {gstRate}%:</span>
+                <span>{formatINR(doc.gst)}</span>
+              </div>
+            </>
+          )}
           <div
             style={{
               display: "flex",

@@ -20,7 +20,6 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
   const [items] = useState(sourceDoc?.items || []);
   const [gstRatePct, setGstRatePct] = useState(sourceDoc?.gstRate ?? settings.gstRate);
   const [manualNumber, setManualNumber] = useState("");
-  const [duplicateCopy, setDuplicateCopy] = useState(false);
   const [savedDoc, setSavedDoc] = useState(null);
   const [verifyResult, setVerifyResult] = useState(null);
   const [downloading, setDownloading] = useState(false);
@@ -29,7 +28,58 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
   const totals = calcTotals(items, gstRatePct);
   const customer = sourceDoc?.customer || null;
 
+  const isPondicherryCustomer = () => {
+    if (!customer) return false;
+    const gstPrefix = String(customer.gst || "").trim().slice(0, 2);
+    if (gstPrefix === "34") return true;
+    const address = String(customer.address || "").toLowerCase();
+    const state = String(customer.state || "").toLowerCase();
+    return address.includes("pondicherry") || address.includes("puducherry") || state.includes("pondicherry") || state.includes("puducherry");
+  };
+
+  const [stateType, setStateType] = useState(() => {
+    if (sourceDoc?.stateType) return sourceDoc.stateType;
+    if (sourceDoc?.taxType === "igst") return "ut";
+    return isPondicherryCustomer() ? "ut" : "normal";
+  });
+  const [copyType, setCopyType] = useState(() => {
+    if (sourceDoc?.invoiceCopyType) return sourceDoc.invoiceCopyType;
+    if (sourceDoc?.duplicateCopyForTransport) return "duplicate";
+    return "original";
+  });
+
+  function handleStateTypeChange(newStateType) {
+    setStateType(newStateType);
+    if (savedDoc) {
+      const isUT = newStateType === "ut";
+      const updated = {
+        ...savedDoc,
+        stateType: newStateType,
+        taxType: isUT ? "igst" : "cgst_sgst",
+        cgst: isUT ? 0 : savedDoc.gst / 2,
+        sgst: isUT ? 0 : savedDoc.gst / 2,
+        igst: isUT ? savedDoc.gst : 0,
+      };
+      setSavedDoc(updated);
+      db.saveInvoice(updated);
+    }
+  }
+
+  function handleCopyTypeChange(newCopyType) {
+    setCopyType(newCopyType);
+    if (savedDoc) {
+      const updated = {
+        ...savedDoc,
+        invoiceCopyType: newCopyType,
+        duplicateCopyForTransport: newCopyType === "duplicate",
+      };
+      setSavedDoc(updated);
+      db.saveInvoice(updated);
+    }
+  }
+
   function buildDocObject(number) {
+    const isUT = type === "invoice" && stateType === "ut";
     return {
       id: savedDoc?.id || uid(type),
       number,
@@ -38,6 +88,11 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
       customer,
       items: items.map((it) => ({ description: it.description, make: it.make, hsn: it.hsn, unit: it.unit, qty: it.qty, rate: it.rate, gstRate: it.gstRate })),
       subtotal: totals.subtotal,
+      stateType: type === "invoice" ? stateType : undefined,
+      taxType: type === "invoice" ? (isUT ? "igst" : "cgst_sgst") : undefined,
+      cgst: isUT ? 0 : totals.gst / 2,
+      sgst: isUT ? 0 : totals.gst / 2,
+      igst: isUT ? totals.gst : 0,
       gst: totals.gst,
       total: totals.total,
       gstRate: Number(gstRatePct || 0),
@@ -45,7 +100,8 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
       company: settings,
       status: type === "invoice" ? "Unpaid" : "Draft",
       sourceNumber: sourceDoc?.number,
-      duplicateCopyForTransport: type === "invoice" ? duplicateCopy : false,
+      invoiceCopyType: type === "invoice" ? copyType : undefined,
+      duplicateCopyForTransport: type === "invoice" ? copyType === "duplicate" : false,
       createdAt: new Date().toISOString(),
     };
   }
@@ -177,24 +233,101 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
             </div>
 
             {type === "invoice" && (
-              <label className="flex items-center gap-2.5 mt-4 pt-4 border-t border-ink/10 cursor-pointer select-none w-fit">
-                <span
-                  onClick={() => setDuplicateCopy((v) => !v)}
-                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors ${
-                    duplicateCopy ? "bg-brand-500" : "bg-ink/15"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 mt-0.5 ml-0.5 rounded-full bg-white shadow transition-transform ${
-                      duplicateCopy ? "translate-x-4" : "translate-x-0"
-                    }`}
-                  />
-                </span>
-                <span className="text-sm">
-                  Mark as <strong>"(Duplicate copy for transport)"</strong> — adds that label to the top-right of the
-                  printed invoice
-                </span>
-              </label>
+              <div className="space-y-4 mt-4 pt-4 border-t border-ink/10">
+                {/* State / Tax Type Selector */}
+                <div>
+                  <label className="text-xs font-semibold text-ink/60 block mb-1.5">
+                    State / Tax Calculation
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleStateTypeChange("normal")}
+                      className={`px-3 py-2.5 rounded-lg text-left border transition ${
+                        stateType === "normal"
+                          ? "bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500"
+                          : "border-ink/10 text-ink/70 hover:bg-ink/5"
+                      }`}
+                    >
+                      <div className="text-xs font-bold flex items-center justify-between">
+                        Normal State
+                        {stateType === "normal" && (
+                          <span className="text-[10px] bg-brand-500 text-white px-1.5 py-0.5 rounded font-semibold">Active</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-ink/50 mt-0.5">
+                        CGST ({Number(gstRatePct || 0) / 2}%) + SGST ({Number(gstRatePct || 0) / 2}%)
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleStateTypeChange("ut")}
+                      className={`px-3 py-2.5 rounded-lg text-left border transition ${
+                        stateType === "ut"
+                          ? "bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500"
+                          : "border-ink/10 text-ink/70 hover:bg-ink/5"
+                      }`}
+                    >
+                      <div className="text-xs font-bold flex items-center justify-between">
+                        Union Territory (UT / Pondicherry)
+                        {stateType === "ut" && (
+                          <span className="text-[10px] bg-brand-500 text-white px-1.5 py-0.5 rounded font-semibold">Active</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-ink/50 mt-0.5">
+                        Only IGST ({Number(gstRatePct || 0)}%) calculation
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Transport Invoice Copy Option */}
+                <div>
+                  <label className="text-xs font-semibold text-ink/60 block mb-1.5">
+                    Transport Invoice Copy
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCopyTypeChange("original")}
+                      className={`px-3 py-2.5 rounded-lg text-left border transition ${
+                        copyType === "original"
+                          ? "bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500"
+                          : "border-ink/10 text-ink/70 hover:bg-ink/5"
+                      }`}
+                    >
+                      <div className="text-xs font-bold flex items-center justify-between">
+                        Original Transport Invoice
+                        {copyType === "original" && (
+                          <span className="text-[10px] bg-brand-500 text-white px-1.5 py-0.5 rounded font-semibold">Selected</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-ink/50 mt-0.5">
+                        Original copy (no duplicate text)
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyTypeChange("duplicate")}
+                      className={`px-3 py-2.5 rounded-lg text-left border transition ${
+                        copyType === "duplicate"
+                          ? "bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500"
+                          : "border-ink/10 text-ink/70 hover:bg-ink/5"
+                      }`}
+                    >
+                      <div className="text-xs font-bold flex items-center justify-between">
+                        Duplicate copy for transport
+                        {copyType === "duplicate" && (
+                          <span className="text-[10px] bg-brand-500 text-white px-1.5 py-0.5 rounded font-semibold">Selected</span>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-ink/50 mt-0.5">
+                        Adds "(Duplicate copy for transport)"
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
