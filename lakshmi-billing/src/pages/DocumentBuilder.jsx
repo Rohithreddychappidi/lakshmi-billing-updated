@@ -154,7 +154,8 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
     if (!printRef.current) return;
     setDownloading(true);
     try {
-      await downloadNodeAsPdf(printRef.current, `${savedDoc.number.replace(/\//g, "-")}.pdf`);
+      const suffix = type === "invoice" && copyType === "duplicate" ? "-Duplicate" : "";
+      await downloadNodeAsPdf(printRef.current, `${savedDoc.number.replace(/\//g, "-")}${suffix}.pdf`);
     } finally {
       setDownloading(false);
     }
@@ -281,10 +282,10 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
                   </div>
                 </div>
 
-                {/* Transport Invoice Copy Option */}
+                {/* Invoice Copy Option */}
                 <div>
                   <label className="text-xs font-semibold text-ink/60 block mb-1.5">
-                    Transport Invoice Copy
+                    Invoice Copy Type
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -297,13 +298,13 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
                       }`}
                     >
                       <div className="text-xs font-bold flex items-center justify-between">
-                        Original Transport Invoice
+                        Original Invoice
                         {copyType === "original" && (
                           <span className="text-[10px] bg-brand-500 text-white px-1.5 py-0.5 rounded font-semibold">Selected</span>
                         )}
                       </div>
                       <div className="text-[11px] text-ink/50 mt-0.5">
-                        Adds "(Original Invoice)"
+                        Adds "Original Invoice"
                       </div>
                     </button>
                     <button
@@ -387,7 +388,7 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
             <p className="text-xs font-semibold text-ink/50 mb-2 uppercase tracking-wide">Live Preview</p>
             <div className="scale-[0.32] origin-top-left w-[254px] h-[320px] overflow-hidden rounded-lg border border-ink/10 shadow-card">
               <div className="scale-[1] w-[794px]">
-                <DocumentTemplate doc={savedDoc || buildDocObject(savedDoc?.number || "PREVIEW")} type={type} />
+                <DocumentTemplate doc={savedDoc || buildDocObject(savedDoc?.number || "PREVIEW")} type={type} copyType={copyType} />
               </div>
             </div>
             {savedDoc && (
@@ -404,7 +405,7 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
 
       {savedDoc && (
         <div className="fixed -left-[9999px] top-0">
-          <DocumentTemplate ref={printRef} doc={savedDoc} type={type} />
+          <DocumentTemplate ref={printRef} doc={savedDoc} type={type} copyType={copyType} />
         </div>
       )}
 
@@ -416,6 +417,9 @@ export default function DocumentBuilder({ type, sourceDoc, onSaved }) {
           onSaveToCloud={handleSaveToCloud}
           onSaveToGoogleDrive={handleSaveToGoogleDrive}
           onClose={() => setVerifyResult(null)}
+          type={type}
+          selectedCopy={copyType}
+          onSelectCopy={handleCopyTypeChange}
         />
       )}
     </div>

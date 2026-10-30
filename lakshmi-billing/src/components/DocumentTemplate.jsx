@@ -22,13 +22,14 @@ const GREEN = "#1ba64b";
 const th = (extra) => ({ border: "1px solid #000", padding: "5px 8px", lineHeight: 1.25, ...extra });
 const td = (extra) => ({ border: "1px solid #000", padding: "5px 8px", lineHeight: 1.3, verticalAlign: "top", ...extra });
 
-const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
+const DocumentTemplate = React.forwardRef(({ doc, type, copyType: propCopyType }, ref) => {
   const company = doc.company || {};
   const customer = doc.customer || {};
   const items = doc.items || [];
   const gstRate = doc.gstRate || 18;
   const isUnionTerritory = doc.stateType === "ut" || doc.taxType === "igst";
-  const isDuplicateCopy = doc.invoiceCopyType === "duplicate" || (!doc.invoiceCopyType && !!doc.duplicateCopyForTransport);
+  const activeCopyType = propCopyType || doc.invoiceCopyType || (doc.duplicateCopyForTransport ? "duplicate" : "original");
+  const isDuplicateCopy = activeCopyType === "duplicate";
 
   if (type === "proforma") {
     return (
@@ -247,9 +248,9 @@ const DocumentTemplate = React.forwardRef(({ doc, type }, ref) => {
         <img src={company.logoDataUrl || defaultLogo} alt="logo" style={{ height: 64, objectFit: "contain" }} />
         <div style={{ textAlign: "right" }}>
           {isDuplicateCopy ? (
-            <div style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 3 }}>(Duplicate copy for transport)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 3 }}>(Duplicate copy for transport)</div>
           ) : (
-            <div style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 3 }}>(Original Invoice)</div>
+            <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 3 }}>Original Invoice</div>
           )}
           <div style={{ fontSize: 26, fontWeight: 700, color: GREEN, letterSpacing: 1 }}>TAX INVOICE</div>
         </div>

@@ -62,7 +62,11 @@ export default function EmailSendButton({ doc, type }) {
         {state === "sending" ? "Sending…" : state === "ok" ? "Sent" : state === "fail" ? "Failed" : "Email"}
       </button>
       <div className="fixed -left-[9999px] top-0">
-        {type === "quotation" ? <QuotationTemplate ref={ref} doc={doc} /> : <DocumentTemplate ref={ref} doc={doc} type={type} />}
+        {type === "quotation" ? (
+          <QuotationTemplate ref={ref} doc={doc} />
+        ) : (
+          <DocumentTemplate ref={ref} doc={doc} type={type} copyType="original" />
+        )}
       </div>
     </>
   );

@@ -1,7 +1,17 @@
 import React, { useState } from "react";
 import { CheckCircle2, XCircle, Download, ShieldCheck, UploadCloud, Copy, Check } from "lucide-react";
 
-export default function VerifyModal({ result, onDownload, onSaveToCloud, onSaveToGoogleDrive, onClose, downloading }) {
+export default function VerifyModal({
+  result,
+  onDownload,
+  onSaveToCloud,
+  onSaveToGoogleDrive,
+  onClose,
+  downloading,
+  type,
+  selectedCopy,
+  onSelectCopy,
+}) {
   if (!result) return null;
   const { checks, passed, total, complete } = result;
 
@@ -39,6 +49,38 @@ export default function VerifyModal({ result, onDownload, onSaveToCloud, onSaveT
         {!complete && (
           <div className="mt-3 text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-lg p-2">
             Some fields look incomplete. You can still download, but double-check the flagged items first.
+          </div>
+        )}
+
+        {type === "invoice" && onSelectCopy && (
+          <div className="mt-4 pt-3 border-t border-ink/10">
+            <label className="text-xs font-semibold text-ink/60 block mb-1.5">
+              Invoice Copy to Download
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onSelectCopy("original")}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold border transition ${
+                  selectedCopy === "original"
+                    ? "bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500"
+                    : "border-ink/10 text-ink/70 hover:bg-ink/5"
+                }`}
+              >
+                Original Invoice
+              </button>
+              <button
+                type="button"
+                onClick={() => onSelectCopy("duplicate")}
+                className={`px-3 py-2 rounded-lg text-xs font-semibold border transition ${
+                  selectedCopy === "duplicate"
+                    ? "bg-brand-50 border-brand-500 text-brand-800 ring-1 ring-brand-500"
+                    : "border-ink/10 text-ink/70 hover:bg-ink/5"
+                }`}
+              >
+                Duplicate (Transport)
+              </button>
+            </div>
           </div>
         )}
 
